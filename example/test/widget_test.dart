@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
-import 'package:intro_flow_example/main.dart';
-import 'package:intro_flow_example/preferences_history_store.dart';
+import 'package:flutter_animated_intro_flow_example/main.dart';
+import 'package:flutter_animated_intro_flow_example/preferences_history_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> frames(WidgetTester tester, [int count = 30]) async {
