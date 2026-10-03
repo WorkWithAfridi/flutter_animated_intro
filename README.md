@@ -21,9 +21,22 @@ only on Flutter and performs no network requests.
 - Input locking, background focus/semantics exclusion, reduced-motion support,
   scrollable coach cards, and application/route lifecycle handling.
 
-## Install locally
+## Install
 
-This initial version has not been published. In a consuming app's `pubspec.yaml`:
+Add the package to your Flutter app:
+
+```sh
+flutter pub add flutter_animated_intro_flow
+```
+
+Or add the dependency to `pubspec.yaml`:
+
+```yaml
+dependencies:
+  flutter_animated_intro_flow: ^0.1.0
+```
+
+For local development, use a path dependency:
 
 ```yaml
 dependencies:
