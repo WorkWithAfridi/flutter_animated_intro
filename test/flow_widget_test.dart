@@ -1,0 +1,209 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
+
+Future<void> frames(WidgetTester tester, [int count = 15]) async {
+  for (var i = 0; i < count; i++) {
+    await tester.pump(const Duration(milliseconds: 32));
+  }
+}
+
+void main() {
+  testWidgets(
+    'autoplays wrapped target and proxies a single action; barrier blocks background',
+    (tester) async {
+      var actions = 0, background = 0;
+      final c = IntroController(
+        tourId: 'widget-wrap',
+        steps: [
+          IntroStep(
+            target: const IntroAnchor.id('button'),
+            title: 'Try adding',
+            description: 'Real action',
+            onNext: () async {
+              actions++;
+              return IntroActionResult.advance;
+            },
+          ),
+        ],
+        historyStore: MemoryIntroHistoryStore(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: IntroFlow(
+            controller: c,
+            startDelay: Duration.zero,
+            child: Scaffold(
+              body: Column(
+                children: [
+                  IntroTarget(
+                    id: 'button',
+                    child: FilledButton(
+                      onPressed: () {},
+                      child: const Text('Add product'),
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => background++,
+                    child: const Text('Background'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await frames(tester);
+      expect(find.text('Try adding'), findsOneWidget);
+      await tester.tap(find.text('Background'), warnIfMissed: false);
+      expect(background, 0);
+      await tester.tapAt(tester.getCenter(find.text('Add product')));
+      await frames(tester);
+      expect(actions, 1);
+      expect(c.isActive, isFalse);
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+    },
+  );
+  testWidgets(
+    'supports provided keys and supplied widgets, back and completion',
+    (tester) async {
+      final key = GlobalKey();
+      final supplied = IntroStep.widget(
+        id: 'supplied',
+        widget: const Text('Supplied widget'),
+        title: 'Second',
+        description: 'Widget API',
+      );
+      final c = IntroController(
+        tourId: 'widget-key',
+        steps: [
+          IntroStep(
+            target: IntroAnchor.key(key),
+            title: 'First',
+            description: 'Key API',
+          ),
+          supplied,
+        ],
+        historyStore: MemoryIntroHistoryStore(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: IntroFlow(
+            controller: c,
+            startDelay: Duration.zero,
+            child: Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Existing key', key: key),
+                    supplied.targetWidget,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await frames(tester);
+      expect(find.text('First'), findsOneWidget);
+      await tester.tap(find.text('Next'));
+      await frames(tester);
+      expect(find.text('Second'), findsOneWidget);
+      await tester.tap(find.text('Back'));
+      await frames(tester);
+      expect(c.currentIndex, 0);
+      await c.goTo(1);
+      await frames(tester);
+      await tester.tap(find.text('Done'));
+      await frames(tester);
+      expect(c.history.completed, isTrue);
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+    },
+  );
+  testWidgets('missing target blocks input, exposes retry and skip', (
+    tester,
+  ) async {
+    final c = IntroController(
+      tourId: 'widget-missing',
+      steps: [
+        const IntroStep(
+          target: IntroAnchor.id('absent'),
+          title: 'Missing',
+          description: 'Waiting',
+        ),
+      ],
+      historyStore: MemoryIntroHistoryStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: IntroFlow(
+          controller: c,
+          startDelay: Duration.zero,
+          targetWaitTimeout: const Duration(milliseconds: 64),
+          child: const Scaffold(body: Text('Underlying')),
+        ),
+      ),
+    );
+    await frames(tester);
+    expect(c.error, isNotNull);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.byType(ModalBarrier), findsWidgets);
+    await tester.tap(find.text('Skip tour'));
+    await frames(tester);
+    expect(c.isActive, isFalse);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  });
+  testWidgets(
+    'custom builder and long copy fit small viewport at large text scale',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final c = IntroController(
+        tourId: 'widget-small',
+        steps: [
+          IntroStep(
+            target: const IntroAnchor.id('a'),
+            title: 'A long localized heading for a small screen',
+            description: List.filled(
+              20,
+              'Detailed localized explanation.',
+            ).join(' '),
+          ),
+        ],
+        historyStore: MemoryIntroHistoryStore(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: const TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: IntroFlow(
+            controller: c,
+            startDelay: Duration.zero,
+            cardBuilder: (_, details) => IntroCoachCard(details: details),
+            child: const Scaffold(
+              body: Center(
+                child: IntroTarget(id: 'a', child: Text('Target')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await frames(tester);
+      expect(tester.takeException(), isNull);
+      c.stop();
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+    },
+  );
+}
