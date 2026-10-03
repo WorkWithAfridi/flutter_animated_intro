@@ -12,6 +12,27 @@ IntroStep step(String id, {Future<IntroActionResult> Function()? action}) =>
     );
 
 void main() {
+  test('repeated skip invokes asynchronous cleanup once', () async {
+    var calls = 0;
+    final pending = Completer<void>();
+    final c = IntroController(
+      tourId: 'skip-once',
+      steps: [step('a')],
+      historyStore: MemoryIntroHistoryStore(),
+      onSkipped: () {
+        calls++;
+        return pending.future;
+      },
+    );
+    await c.start();
+    final first = c.skip();
+    await c.skip();
+    expect(calls, 1);
+    pending.complete();
+    await first;
+    expect(c.isActive, isFalse);
+    c.dispose();
+  });
   test(
     'once policy counts skipped runs and replay bypasses frequency',
     () async {

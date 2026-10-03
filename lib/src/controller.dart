@@ -43,6 +43,7 @@ class IntroController extends ChangeNotifier {
   Object? _host;
   bool _active = false, _paused = false, _busy = false, _disposed = false;
   int _index = 0, _generation = 0;
+  int? _finishingGeneration;
   Object? _error;
   IntroHistory _history = const IntroHistory();
 
@@ -80,7 +81,7 @@ class IntroController extends ChangeNotifier {
 
   void detach(Object host) {
     if (!identical(_host, host)) return;
-    stop();
+    stop(deferNotification: true);
     _host = null;
     _prepareTarget = null;
   }
@@ -226,7 +227,7 @@ class IntroController extends ChangeNotifier {
   /// Skip while a target/action is pending. Stale results cannot advance the tour;
   /// host actions themselves cannot be cancelled and must manage their own state.
   Future<void> skip() async {
-    if (_disposed || !_active) return;
+    if (_disposed || !_active || _finishingGeneration == _generation) return;
     final generation = ++_generation;
     _busy = true;
     _paused = false;
@@ -245,18 +246,23 @@ class IntroController extends ChangeNotifier {
   }
 
   Future<void> _finish(int generation, {required bool skipped}) async {
-    await (skipped ? onSkipped?.call() : onCompleted?.call());
-    if (!_valid(generation)) return;
-    final finished = IntroHistory(
-      playCount: _history.playCount,
-      lastPlayedAt: _history.lastPlayedAt,
-      completed: _history.completed || !skipped,
-    );
-    await historyStore.write(tourId, finished);
-    if (!_valid(generation)) return;
-    _history = finished;
-    _active = false;
-    _emit();
+    _finishingGeneration = generation;
+    try {
+      await (skipped ? onSkipped?.call() : onCompleted?.call());
+      if (!_valid(generation)) return;
+      final finished = IntroHistory(
+        playCount: _history.playCount,
+        lastPlayedAt: _history.lastPlayedAt,
+        completed: _history.completed || !skipped,
+      );
+      await historyStore.write(tourId, finished);
+      if (!_valid(generation)) return;
+      _history = finished;
+      _active = false;
+      _emit();
+    } finally {
+      if (_finishingGeneration == generation) _finishingGeneration = null;
+    }
   }
 
   void pause() {
@@ -275,13 +281,18 @@ class IntroController extends ChangeNotifier {
   }
 
   /// Hide without completion/skip callbacks. The started run remains recorded.
-  void stop() {
+  /// Hosts defer notification when stopping during widget-tree disposal.
+  void stop({bool deferNotification = false}) {
     ++_generation;
     _active = false;
     _paused = false;
     _busy = false;
     _error = null;
-    _emit();
+    if (deferNotification) {
+      scheduleMicrotask(_emit);
+    } else {
+      _emit();
+    }
   }
 
   Future<bool> replay({int initialStep = 0}) async {
@@ -293,10 +304,21 @@ class IntroController extends ChangeNotifier {
     if (_active || _busy) {
       throw StateError('Stop the tour before resetting history.');
     }
-    await historyStore.delete(tourId);
-    _sessionPlayed.remove(tourId);
-    _history = const IntroHistory();
+    if (_disposed) return;
+    final generation = ++_generation;
+    _busy = true;
     _emit();
+    try {
+      await historyStore.delete(tourId);
+      if (!_valid(generation)) return;
+      _sessionPlayed.remove(tourId);
+      _history = const IntroHistory();
+    } finally {
+      if (_valid(generation)) {
+        _busy = false;
+        _emit();
+      }
+    }
   }
 
   @override

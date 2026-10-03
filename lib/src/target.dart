@@ -45,7 +45,20 @@ class _IntroTargetState extends State<IntroTarget> {
   void _unregister() {
     if (_registeredId != null) {
       _controller?.unregisterTarget(_registeredId!, _targetKey);
+      _registeredId = null;
     }
+  }
+
+  @override
+  void deactivate() {
+    _unregister();
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _register();
   }
 
   @override

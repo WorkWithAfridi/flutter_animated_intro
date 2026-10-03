@@ -6,3 +6,4 @@ export 'src/flow.dart';
 export 'src/history.dart';
 export 'src/models.dart';
 export 'src/target.dart';
+export 'src/auto_play.dart';

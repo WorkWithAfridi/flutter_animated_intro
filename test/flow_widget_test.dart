@@ -9,6 +9,152 @@ Future<void> frames(WidgetTester tester, [int count = 15]) async {
 }
 
 void main() {
+  testWidgets('remounting targets releases old IDs before disposal', (
+    tester,
+  ) async {
+    final c = IntroController(
+      tourId: 'remount',
+      steps: [
+        const IntroStep(
+          target: IntroAnchor.id('a'),
+          title: 'A',
+          description: 'A',
+        ),
+      ],
+      historyStore: MemoryIntroHistoryStore(),
+    );
+    Widget screen(int visit) => MaterialApp(
+      home: IntroFlow(
+        controller: c,
+        autoPlay: false,
+        child: KeyedSubtree(
+          key: ValueKey(visit),
+          child: const Scaffold(
+            body: IntroTarget(id: 'a', child: Text('Target')),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(screen(0));
+    await tester.pumpWidget(screen(1));
+    expect(tester.takeException(), isNull);
+    expect(c.keyFor(const IntroAnchor.id('a'))?.currentContext, isNotNull);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  });
+  testWidgets('screen trigger stops without notifying during disposal', (
+    tester,
+  ) async {
+    final c = IntroController(
+      tourId: 'trigger',
+      steps: [
+        const IntroStep(
+          target: IntroAnchor.id('a'),
+          title: 'A',
+          description: 'A',
+        ),
+      ],
+      historyStore: MemoryIntroHistoryStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: IntroFlow(
+          controller: c,
+          autoPlay: false,
+          child: IntroAutoPlay(
+            controller: c,
+            delay: Duration.zero,
+            child: const Scaffold(
+              body: IntroTarget(id: 'a', child: Text('Target')),
+            ),
+          ),
+        ),
+      ),
+    );
+    await frames(tester);
+    expect(c.isActive, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    expect(c.isActive, isFalse);
+    expect(tester.takeException(), isNull);
+    c.dispose();
+  });
+  testWidgets(
+    'offstage target waits instead of highlighting invisible content',
+    (tester) async {
+      final c = IntroController(
+        tourId: 'offstage',
+        steps: [
+          const IntroStep(
+            target: IntroAnchor.id('a'),
+            title: 'A',
+            description: 'A',
+          ),
+        ],
+        historyStore: MemoryIntroHistoryStore(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: IntroFlow(
+            controller: c,
+            startDelay: Duration.zero,
+            targetWaitTimeout: const Duration(milliseconds: 64),
+            child: const Scaffold(
+              body: Offstage(
+                child: IntroTarget(id: 'a', child: Text('Invisible')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await frames(tester);
+      expect(c.error, isNotNull);
+      expect(find.text('Retry'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+    },
+  );
+  testWidgets(
+    'lifecycle hidden then paused resumes without losing pause ownership',
+    (tester) async {
+      final c = IntroController(
+        tourId: 'lifecycle',
+        steps: [
+          const IntroStep(
+            target: IntroAnchor.id('a'),
+            title: 'A',
+            description: 'A',
+          ),
+        ],
+        historyStore: MemoryIntroHistoryStore(),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: IntroFlow(
+            controller: c,
+            startDelay: Duration.zero,
+            child: const Scaffold(
+              body: IntroTarget(id: 'a', child: Text('Target')),
+            ),
+          ),
+        ),
+      );
+      await frames(tester);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      expect(c.isPaused, isTrue);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await frames(tester);
+      expect(c.isPaused, isFalse);
+      c.pause();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await frames(tester);
+      expect(c.isPaused, isTrue);
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+    },
+  );
   testWidgets(
     'autoplays wrapped target and proxies a single action; barrier blocks background',
     (tester) async {

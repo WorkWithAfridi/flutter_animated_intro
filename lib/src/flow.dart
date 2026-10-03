@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'controller.dart';
 import 'models.dart';
@@ -178,7 +179,8 @@ class _IntroFlowState extends State<IntroFlow>
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _lifecyclePaused =
-          widget.controller.isActive && !widget.controller.isPaused;
+          _lifecyclePaused ||
+          (widget.controller.isActive && !widget.controller.isPaused);
       widget.controller.pause();
     }
   }
@@ -199,7 +201,7 @@ class _IntroFlowState extends State<IntroFlow>
     if (!active && _ticker.isActive) _ticker.stop();
   }
 
-  Rect? _rectFor(IntroStep step) {
+  Rect? _rectFor(IntroStep step, {bool clipToViewport = true}) {
     final target = widget.controller
         .keyFor(step.target)
         ?.currentContext
@@ -220,8 +222,12 @@ class _IntroFlowState extends State<IntroFlow>
     RenderObject child = target;
     RenderObject? parent = child.parent;
     while (parent != null && parent != overlay) {
+      if ((parent is RenderOffstage && parent.offstage) ||
+          (parent is RenderOpacity && parent.opacity == 0)) {
+        return null;
+      }
       final clip = parent.describeApproximatePaintClip(child);
-      if (clip != null) {
+      if (clipToViewport && clip != null) {
         rect = rect.intersect(
           MatrixUtils.transformRect(parent.getTransformTo(overlay), clip),
         );
@@ -229,7 +235,7 @@ class _IntroFlowState extends State<IntroFlow>
       child = parent;
       parent = parent.parent;
     }
-    rect = rect.intersect(Offset.zero & overlay.size);
+    if (clipToViewport) rect = rect.intersect(Offset.zero & overlay.size);
     return rect.isEmpty || !rect.isFinite ? null : rect;
   }
 
@@ -266,7 +272,8 @@ class _IntroFlowState extends State<IntroFlow>
       if (targetContext != null &&
           targetContext.mounted &&
           step.autoScroll &&
-          !scrolled) {
+          !scrolled &&
+          _rectFor(step) != _rectFor(step, clipToViewport: false)) {
         scrolled = true;
         await Scrollable.ensureVisible(
           targetContext,
@@ -312,7 +319,10 @@ class _IntroFlowState extends State<IntroFlow>
           key: _stackKey,
           fit: StackFit.expand,
           children: [
-            ExcludeSemantics(excluding: visible, child: widget.child),
+            ExcludeFocus(
+              excluding: visible,
+              child: ExcludeSemantics(excluding: visible, child: widget.child),
+            ),
             if (visible) Positioned.fill(child: _overlay(context)),
           ],
         ),
