@@ -5,7 +5,11 @@ Wrap a screen, describe its steps, and let the intro play when the screen opens.
 Use any state manager, localization system, or local storage. The package depends
 only on Flutter and performs no network requests.
 
-![Walkthrough](doc/images/tour.png)
+| Animated walkthrough | Bottom-sheet target |
+| --- | --- |
+| ![Animated spotlight and coach card](https://raw.githubusercontent.com/WorkWithAfridi/flutter_animated_intro/main/doc/images/tour.png) | ![Intro highlighting a bottom-sheet target](https://raw.githubusercontent.com/WorkWithAfridi/flutter_animated_intro/main/doc/images/modal.png) |
+| **Desktop playground** | **Mobile walkthrough** |
+| ![Responsive desktop playground](https://raw.githubusercontent.com/WorkWithAfridi/flutter_animated_intro/main/doc/images/desktop.png) | ![Responsive mobile walkthrough](https://raw.githubusercontent.com/WorkWithAfridi/flutter_animated_intro/main/doc/images/mobile.png) |
 
 ## Features
 
@@ -33,7 +37,7 @@ Or add the dependency to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_animated_intro_flow: ^0.1.0
+  flutter_animated_intro_flow: ^0.1.1
 ```
 
 For local development, use a path dependency:
