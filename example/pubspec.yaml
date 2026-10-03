@@ -1,4 +1,4 @@
-name: flutter_animated_intro_flow_example
+name: flutter_animated_intro_example
 description: Responsive store and interactive playground for animated intro flows.
 publish_to: none
 version: 1.0.0+1
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_animated_intro_flow:
+  flutter_animated_intro:
     path: ../
   shared_preferences: ^2.5.5
   cupertino_icons: ^1.0.8

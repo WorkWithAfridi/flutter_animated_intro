@@ -1,4 +1,4 @@
-# flutter_animated_intro_flow
+# flutter_animated_intro
 
 Animated walkthroughs that highlight real Flutter widgets and perform real actions.
 Wrap a screen, describe its steps, and let the intro play when the screen opens.
@@ -30,22 +30,22 @@ only on Flutter and performs no network requests.
 Add the package to your Flutter app:
 
 ```sh
-flutter pub add flutter_animated_intro_flow
+flutter pub add flutter_animated_intro
 ```
 
 Or add the dependency to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  flutter_animated_intro_flow: ^0.1.1
+  flutter_animated_intro: ^0.1.2
 ```
 
 For local development, use a path dependency:
 
 ```yaml
 dependencies:
-  flutter_animated_intro_flow:
-    path: E:/Developer/Flutter-packages/flutter_animated_intro_flow
+  flutter_animated_intro:
+    path: E:/Developer/Flutter-packages/flutter_animated_intro
 ```
 
 Requires Dart 3.9+ and Flutter 3.35+. Validation currently uses Flutter 3.44.2.
@@ -54,7 +54,7 @@ Requires Dart 3.9+ and Flutter 3.35+. Validation currently uses Flutter 3.44.2.
 
 ```dart
 import 'package:flutter/material.dart';
-import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
+import 'package:flutter_animated_intro/flutter_animated_intro.dart';
 
 class CatalogPage extends StatefulWidget {
   const CatalogPage({super.key});

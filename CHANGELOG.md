@@ -1,3 +1,8 @@
+## 0.1.2
+
+- Publish under the intended flutter_animated_intro name.
+- Rename the library entry point, imports, example, and platform identifiers.
+
 ## 0.1.1
 
 - Fix README image URLs for pub.dev and display four demo previews in a two-column grid.

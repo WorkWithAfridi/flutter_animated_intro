@@ -1,6 +1,6 @@
 {
-    "name": "flutter_animated_intro_flow_example",
-    "short_name": "flutter_animated_intro_flow_example",
+    "name": "flutter_animated_intro_example",
+    "short_name": "flutter_animated_intro_example",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

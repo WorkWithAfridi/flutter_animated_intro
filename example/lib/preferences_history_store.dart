@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
+import 'package:flutter_animated_intro/flutter_animated_intro.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// App-owned offline persistence; the package itself needs only Flutter.
@@ -9,7 +9,7 @@ class PreferencesHistoryStore implements IntroHistoryStore {
   /// Preferences loaded during app startup, before the first automatic start.
   final SharedPreferences preferences;
   // Namespace tour records so resetting one tour leaves unrelated settings intact.
-  String _key(String id) => 'intro_flow_demo.$id';
+  String _key(String id) => 'flutter_animated_intro_demo.$id';
   @override
   Future<IntroHistory?> read(String tourId) async {
     final raw = preferences.getString(_key(tourId));

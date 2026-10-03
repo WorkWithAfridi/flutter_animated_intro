@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
-import 'package:flutter_animated_intro_flow_example/main.dart';
+import 'package:flutter_animated_intro/flutter_animated_intro.dart';
+import 'package:flutter_animated_intro_example/main.dart';
 
 void main() {
   final fonts = Platform.environment['INTRO_PREVIEW_FONT_DIR'];

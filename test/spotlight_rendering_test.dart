@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
+import 'package:flutter_animated_intro/flutter_animated_intro.dart';
 
 void main() {
   testWidgets(

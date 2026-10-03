@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
+import 'package:flutter_animated_intro/flutter_animated_intro.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'preferences_history_store.dart';
 

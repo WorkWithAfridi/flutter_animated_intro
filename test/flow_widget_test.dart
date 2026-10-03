@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_animated_intro_flow/flutter_animated_intro_flow.dart';
+import 'package:flutter_animated_intro/flutter_animated_intro.dart';
 
 Future<void> frames(WidgetTester tester, [int count = 15]) async {
   for (var i = 0; i < count; i++) {
