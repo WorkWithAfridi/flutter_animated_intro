@@ -13,6 +13,7 @@ dependencies:
   flutter_animated_intro_flow:
     path: ../
   shared_preferences: ^2.5.5
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
