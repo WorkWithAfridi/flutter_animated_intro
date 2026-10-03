@@ -5,7 +5,7 @@ Wrap a screen, describe its steps, and let the intro play when the screen opens.
 Use any state manager, localization system, or local storage. The package depends
 only on Flutter and performs no network requests.
 
-![Bloom example](doc/images/desktop.png)
+![Walkthrough](doc/images/tour.png)
 
 ## Features
 
@@ -318,8 +318,6 @@ colors, dark mode, arrows, and controller state. The initial tour autoplays once
 Skip or finish to access settings. Use **Reopen screen** to remount the screen
 and test frequency; **Replay intro** deliberately bypasses it.
 
-![Walkthrough](doc/images/tour.png)
-
 ## Validate
 
 ```powershell
@@ -340,3 +338,7 @@ flutter test test/preview_test.dart
 The package and demo include controller, widget, modal, scrolling, lifecycle,
 mobile, and persistence tests. Previews are Flutter test renders, not browser
 captures. Native device behavior still needs platform QA before a public release.
+
+## License
+
+Licensed under the [MIT License](LICENSE).
