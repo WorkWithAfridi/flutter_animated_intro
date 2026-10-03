@@ -631,13 +631,15 @@ class _SpotlightPainter extends CustomPainter {
   final Color barrier, accent;
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path()..addRect(Offset.zero & size);
+    // Explicit parity keeps the spotlight transparent on both web and native
+    // renderers, without relying on a boolean path operation's contour winding.
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size);
     if (target != null) {
       final hole = RRect.fromRectAndRadius(target!, Radius.circular(radius));
-      canvas.drawPath(
-        Path.combine(PathOperation.difference, path, Path()..addRRect(hole)),
-        Paint()..color = barrier,
-      );
+      path.addRRect(hole);
+      canvas.drawPath(path, Paint()..color = barrier);
       canvas.drawRRect(
         hole,
         Paint()
