@@ -29,34 +29,69 @@ class IntroController extends ChangeNotifier {
       throw ArgumentError('cooldown cannot be negative.');
     }
   }
+
+  /// Stable history key; change the ID when introducing a new tour version.
   final String tourId;
+
+  /// Immutable ordered steps for this controller.
   final List<IntroStep> steps;
+
+  /// Eligibility rules for automatic starts, including the optional play limit.
   final IntroPlaybackPolicy policy;
+
+  /// Storage owned by the host; defaults to process-local memory.
   final IntroHistoryStore historyStore;
+
+  /// Awaited lifecycle hooks; completion/skip cleanup precedes the final save.
   final Future<void> Function()? onStarted, onCompleted, onSkipped;
+
+  /// Called before onEnter whenever a step is entered, including retry/resume.
   final void Function(int index, IntroStep step)? onStepChanged;
+
+  /// Reports errors from playback, target preparation, and lifecycle hooks.
   final void Function(Object error, StackTrace stackTrace)? onError;
   final DateTime Function() _clock;
+  // Session eligibility is shared across controller replacements for the same ID.
   static final Set<String> _sessionPlayed = {};
   final Map<String, GlobalKey> _targets = {};
   Future<bool> Function(IntroStep)? _prepareTarget;
   Object? _host;
   bool _active = false, _paused = false, _busy = false, _disposed = false;
+  // Async operations capture a generation. Stop/pause/skip invalidate their
+  // results without claiming to cancel side effects in host callbacks.
   int _index = 0, _generation = 0;
   int? _finishingGeneration;
   Object? _error;
   IntroHistory _history = const IntroHistory();
 
+  /// Whether a run exists, including while it is paused.
   bool get isActive => _active;
+
+  /// Whether the active run is hidden and the underlying screen is unlocked.
   bool get isPaused => _paused;
+
+  /// Whether preparation, an action, or storage operation is in progress.
   bool get isBusy => _busy;
+
+  /// Zero-based current step index.
   int get currentIndex => _index;
+
+  /// Active step, or null when no run is active.
   IntroStep? get currentStep => _active ? steps[_index] : null;
+
+  /// Whether the current index points to the final configured step.
   bool get isLastStep => _index == steps.length - 1;
+
+  /// Most recent recoverable playback error, cleared by a new action.
   Object? get error => _error;
+
+  /// Last loaded or successfully persisted history snapshot.
   IntroHistory get history => _history;
+
+  /// One-based step progress from zero to one; zero when inactive.
   double get progress => _active ? (_index + 1) / steps.length : 0;
 
+  /// Infrastructure registration; IDs must be unique among mounted targets.
   void registerTarget(String id, GlobalKey key) {
     if (_targets[id] != null && !identical(_targets[id], key)) {
       throw FlutterError('Duplicate IntroTarget ID "$id" in tour "$tourId".');
@@ -64,10 +99,12 @@ class IntroController extends ChangeNotifier {
     _targets[id] = key;
   }
 
+  /// Removes a registration only when the key still belongs to that target.
   void unregisterTarget(String id, GlobalKey key) {
     if (identical(_targets[id], key)) _targets.remove(id);
   }
 
+  /// Resolves an explicit key or a currently registered target ID.
   GlobalKey? keyFor(IntroAnchor anchor) => anchor.key ?? _targets[anchor.id];
 
   /// Infrastructure hook used by IntroFlow. One controller supports one host.
@@ -79,6 +116,7 @@ class IntroController extends ChangeNotifier {
     _prepareTarget = prepareTarget;
   }
 
+  /// Detaches only the matching host and stops its run without lifecycle hooks.
   void detach(Object host) {
     if (!identical(_host, host)) return;
     stop(deferNotification: true);
@@ -116,6 +154,7 @@ class IntroController extends ChangeNotifier {
         lastPlayedAt: now,
         completed: _history.completed,
       );
+      // Record the start before revealing the overlay: skipped runs also count.
       await historyStore.write(tourId, started);
       if (!_valid(generation)) return false;
       _history = started;
@@ -178,6 +217,7 @@ class IntroController extends ChangeNotifier {
     }
   }
 
+  // Serialize normal controls so rapid taps cannot execute an action twice.
   Future<void> _run(Future<void> Function(int) action) async {
     if (_disposed || !_active || _paused || _busy) return;
     _busy = true;
@@ -196,6 +236,7 @@ class IntroController extends ChangeNotifier {
     }
   }
 
+  /// Runs onNext, then advances or completes unless the action returns stay.
   Future<void> next() => _run((generation) async {
     final result =
         await steps[_index].onNext?.call() ?? IntroActionResult.advance;
@@ -219,8 +260,13 @@ class IntroController extends ChangeNotifier {
     });
   }
 
+  /// Enters the preceding step without running the current step's onNext.
   Future<void> previous() => _index > 0 ? goTo(_index - 1) : Future.value();
+
+  /// Re-runs onEnter and target preparation for the current step.
   Future<void> retry() => _run(_enter);
+
+  /// Finishes directly, awaiting completion cleanup and recording success.
   Future<void> complete() =>
       _run((generation) => _finish(generation, skipped: false));
 
@@ -265,6 +311,7 @@ class IntroController extends ChangeNotifier {
     }
   }
 
+  /// Hides the overlay and invalidates pending results, preserving the step.
   void pause() {
     if (!_active || _paused) return;
     ++_generation;
@@ -273,6 +320,7 @@ class IntroController extends ChangeNotifier {
     _emit();
   }
 
+  /// Reveals the run and prepares its current step again.
   Future<void> resume() async {
     if (!_active || !_paused) return;
     _paused = false;
@@ -295,11 +343,14 @@ class IntroController extends ChangeNotifier {
     }
   }
 
+  /// Starts a fresh run and deliberately bypasses automatic playback rules.
   Future<bool> replay({int initialStep = 0}) async {
     stop();
     return start(initialStep: initialStep);
   }
 
+  /// Clears persisted and session history; stop the tour before calling.
+  /// Storage failures propagate to the caller.
   Future<void> resetHistory() async {
     if (_active || _busy) {
       throw StateError('Stop the tour before resetting history.');

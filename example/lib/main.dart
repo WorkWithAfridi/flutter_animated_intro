@@ -6,6 +6,7 @@ import 'preferences_history_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load local history before autoplay can evaluate first-run eligibility.
   final preferences = await SharedPreferences.getInstance();
   runApp(IntroDemoApp(historyStore: PreferencesHistoryStore(preferences)));
 }
@@ -15,13 +16,19 @@ const forest = Color(0xFF296348);
 const canvas = Color(0xFFF5F6F0);
 const muted = Color(0xFF6F7E75);
 
+/// Interactive playground for target integration, playback rules, and theming.
+/// Inject a memory history store in tests or persistent storage in the real app.
 class IntroDemoApp extends StatefulWidget {
   const IntroDemoApp({
     super.key,
     required this.historyStore,
     this.autoPlay = true,
   });
+
+  /// App-owned history adapter, keeping storage plugins outside the package.
   final IntroHistoryStore historyStore;
+
+  /// Initial screen autoplay setting; the playground can change it at runtime.
   final bool autoPlay;
   @override
   State<IntroDemoApp> createState() => _IntroDemoAppState();
@@ -29,6 +36,7 @@ class IntroDemoApp extends StatefulWidget {
 
 class _IntroDemoAppState extends State<IntroDemoApp> {
   final _navigator = GlobalKey<NavigatorState>();
+  // Existing-key integration: the same key is attached to the actual bag button.
   final _cartKey = GlobalKey();
   late IntroController _intro;
   late IntroStep _suppliedStep;
@@ -60,6 +68,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
   }
 
   void _createController() {
+    // Supplied-widget integration: retain the step and insert targetWidget once.
     _suppliedStep = IntroStep.widget(
       id: 'collection',
       widget: const _CollectionBanner(),
@@ -69,6 +78,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
       placement: IntroPlacement.above,
     );
     _intro = IntroController(
+      // Keep this ID stable across visits; version it when the tour content changes.
       tourId: 'bloom-store-v1',
       historyStore: widget.historyStore,
       policy: IntroPlaybackPolicy(
@@ -101,6 +111,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
           description:
               'Already have a GlobalKey? Pass it as an IntroAnchor.key. Next opens the real bag sheet, and the tour follows us inside.',
           onNext: () async {
+            // Do not await sheet dismissal: the next target lives inside the sheet.
             _openDetails();
             return IntroActionResult.advance;
           },
@@ -110,6 +121,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
           title: 'Works inside a bottom sheet',
           description:
               'The flow sits above the Navigator, so modal targets remain visible. This step closes only the sheet owned by this demo before continuing.',
+          // Also prepare the sheet when reaching this step through Back or goTo.
           onEnter: () async {
             _openDetails();
           },
@@ -137,6 +149,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
   }
 
   void _openDetails() {
+    // Guard the interval before the route builder runs as well as mounted sheets.
     if (_detailsRoute != null || _detailsOpening) return;
     final context = _navigator.currentContext;
     if (context == null) return;
@@ -158,6 +171,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
               padding: const EdgeInsets.fromLTRB(28, 12, 28, 32),
               child: IntroTarget(
                 id: 'bag-details',
+                // Explicit ownership also supports modal targets outside a local scope.
                 controller: _intro,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -234,12 +248,14 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
     final route = _detailsRoute;
     if (route?.isCurrent ?? false) {
       _navigator.currentState?.pop();
+      // Wait for the exit transition so the next target is no longer covered.
       await route!.completed;
     }
     _detailsRoute = null;
   }
 
   void _replacePolicy(IntroFrequency frequency) {
+    // Policies are immutable; replace the controller but retain its history ID.
     _closeDetails();
     final previous = _intro;
     previous.stop();
@@ -247,12 +263,14 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
       _frequency = frequency;
       _createController();
     });
+    // Give IntroFlow a frame to detach the old controller before disposing it.
     WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
   }
 
   void _reopen() {
     _closeDetails();
     _intro.stop();
+    // A new key remounts the screen trigger, simulating another screen visit.
     setState(() => _visit++);
     _log('Screen reopened. Automatic playback follows your policy.');
   }
@@ -297,6 +315,8 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
           ),
         ),
       ),
+      // A global overlay above the Navigator can highlight bottom-sheet targets.
+      // The screen trigger below owns autoplay, avoiding two competing starters.
       builder: (context, child) => IntroFlow(
         controller: _intro,
         autoPlay: false,
@@ -306,6 +326,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
             : null,
         child: child!,
       ),
+      // Automatic starts honor frequency; Replay intro deliberately bypasses it.
       home: IntroAutoPlay(
         key: ValueKey(_visit),
         controller: _intro,
@@ -541,6 +562,7 @@ class _IntroDemoAppState extends State<IntroDemoApp> {
         },
       ),
       const SizedBox(height: 24),
+      // Insert the supplied target into the real responsive layout exactly once.
       _suppliedStep.targetWidget,
       const SizedBox(height: 22),
       Wrap(
@@ -942,6 +964,7 @@ class _Pill extends StatelessWidget {
   );
 }
 
+// Local Flutter artwork keeps this example runnable without network assets.
 class _PlantArt extends StatelessWidget {
   const _PlantArt({required this.icon, required this.color, this.size = 150});
   final IconData icon;
@@ -991,6 +1014,7 @@ class _PlantArt extends StatelessWidget {
   );
 }
 
+// Only the first product wraps its real Add control with an IntroTarget.
 class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.name,
@@ -1155,6 +1179,8 @@ class _TrustNote extends StatelessWidget {
   );
 }
 
+// Custom cards receive the same controller state and commands as the default UI.
+// Disable actions while busy and honor allowBack/allowSkip when presenting controls.
 class _CustomCard extends StatelessWidget {
   const _CustomCard({required this.details});
   final IntroCardDetails details;

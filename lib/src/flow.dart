@@ -7,6 +7,7 @@ import 'controller.dart';
 import 'models.dart';
 import 'target.dart';
 
+/// Builds a replacement coach card using the current step and playback controls.
 typedef IntroCardBuilder =
     Widget Function(BuildContext context, IntroCardDetails details);
 
@@ -19,16 +20,38 @@ class IntroCardDetails {
     required this.allowSkip,
     required this.allowBack,
   });
+
+  /// Playback state and commands shared with the overlay.
   final IntroController controller;
+
+  /// Step whose copy and target the card describes.
   final IntroStep step;
+
+  /// Host customization available to both default and custom cards.
   final IntroTheme theme;
+
+  /// UI permissions; custom cards should honor these when showing controls.
   final bool allowSkip, allowBack;
+
+  /// One-based step number for display.
   int get stepNumber => controller.currentIndex + 1;
+
+  /// Total number of configured steps.
   int get stepCount => controller.steps.length;
+
+  /// Whether the next action completes the tour.
   bool get isLastStep => controller.isLastStep;
+
+  /// Use this to disable controls while asynchronous work is pending.
   bool get isBusy => controller.isBusy;
+
+  /// Runs the step action and advances when permitted.
   Future<void> next() => controller.next();
+
+  /// Re-enters the previous step without executing onNext.
   Future<void> back() => controller.previous();
+
+  /// Ends the tour through its skip callback.
   Future<void> skip() => controller.skip();
 }
 
@@ -51,11 +74,22 @@ class IntroFlow extends StatefulWidget {
     this.blockBackNavigation = true,
     this.routeObserver,
   });
+
+  /// Host-owned controller; this widget attaches it but does not dispose it.
   final IntroController controller;
+
+  /// Screen or Navigator beneath the overlay.
   final Widget child;
+
+  /// Automatic start, overlay enablement, default controls, and back blocking.
+  /// Disabling pauses a run; re-enabling resumes it or requests autoplay.
   final bool autoPlay, enabled, allowSkip, allowBack, blockBackNavigation;
+
+  /// Initial delay, target polling timeout, and automatic scroll duration.
   final Duration startDelay, targetWaitTimeout, scrollDuration;
   final IntroTheme theme;
+
+  /// Replaces the ready-step card; loading/error states remain built in.
   final IntroCardBuilder? cardBuilder;
 
   /// Register this observer in MaterialApp.navigatorObservers to pause covered
@@ -68,6 +102,8 @@ class IntroFlow extends StatefulWidget {
 
 class _IntroFlowState extends State<IntroFlow>
     with SingleTickerProviderStateMixin, RouteAware, WidgetsBindingObserver {
+  // Both keys measure real layout: target coordinates are relative to the stack,
+  // and card height can change with localized copy or a custom builder.
   final _stackKey = GlobalKey();
   final _cardKey = GlobalKey();
   late final Ticker _ticker;
@@ -178,6 +214,7 @@ class _IntroFlowState extends State<IntroFlow>
       }
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
+      // Resume only pauses owned by the app lifecycle, preserving manual pauses.
       _lifecyclePaused =
           _lifecyclePaused ||
           (widget.controller.isActive && !widget.controller.isPaused);
@@ -193,6 +230,7 @@ class _IntroFlowState extends State<IntroFlow>
   }
 
   void _syncTicker() {
+    // Track scrolling and animated targets each frame only while the tour is visible.
     final active =
         widget.enabled &&
         widget.controller.isActive &&
@@ -214,6 +252,7 @@ class _IntroFlowState extends State<IntroFlow>
         !overlay.hasSize) {
       return null;
     }
+    // Convert into overlay coordinates instead of assuming a full-screen origin.
     var rect = MatrixUtils.transformRect(
       target.getTransformTo(overlay),
       Offset.zero & target.size,
@@ -259,6 +298,8 @@ class _IntroFlowState extends State<IntroFlow>
   }
 
   Future<bool> _prepare(IntroStep step) async {
+    // onEnter may have just opened a route. Poll until its target is laid out.
+    // Lazy children must be mounted by the host before they can be auto-scrolled.
     var waited = Duration.zero;
     const interval = Duration(milliseconds: 32);
     var scrolled = false;
@@ -274,6 +315,7 @@ class _IntroFlowState extends State<IntroFlow>
           step.autoScroll &&
           !scrolled &&
           _rectFor(step) != _rectFor(step, clipToViewport: false)) {
+        // Scroll once per preparation to avoid repeatedly fighting user scrolling.
         scrolled = true;
         await Scrollable.ensureVisible(
           targetContext,
@@ -319,6 +361,7 @@ class _IntroFlowState extends State<IntroFlow>
           key: _stackKey,
           fit: StackFit.expand,
           children: [
+            // Keep keyboard focus and accessibility navigation inside the tour.
             ExcludeFocus(
               excluding: visible,
               child: ExcludeSemantics(excluding: visible, child: widget.child),
@@ -352,6 +395,7 @@ class _IntroFlowState extends State<IntroFlow>
         final size = constraints.biggest;
         final media = MediaQuery.of(context);
         final margin = theme.screenPadding;
+        // Reserve safe areas and keyboard space before clamping card placement.
         final leftBound = media.padding.left + margin;
         final rightBound = size.width - media.padding.right - margin;
         final topBound = media.padding.top + margin;
@@ -417,11 +461,14 @@ class _IntroFlowState extends State<IntroFlow>
                 ),
               ),
             ),
+            // Painting and input blocking are separate: the transparent barrier
+            // also protects the screen while a target is missing or loading.
             const ModalBarrier(
               dismissible: false,
               color: Colors.transparent,
               barrierSemanticsDismissible: false,
             ),
+            // Spotlight taps use the tour action, never forward to the child.
             if (target != null && !error && step.advanceOnTargetTap)
               Positioned.fromRect(
                 rect: target
@@ -457,6 +504,7 @@ class _IntroFlowState extends State<IntroFlow>
                   ),
                 ),
               ),
+            // Long descriptions and large text remain reachable on short screens.
             AnimatedPositioned(
               duration: duration,
               curve: Curves.easeOutCubic,
@@ -481,6 +529,7 @@ class _IntroFlowState extends State<IntroFlow>
 }
 
 /// Default card, also reusable inside custom card builders.
+/// Default accessible coach card with progress and asynchronous playback controls.
 class IntroCoachCard extends StatelessWidget {
   const IntroCoachCard({super.key, required this.details});
   final IntroCardDetails details;
