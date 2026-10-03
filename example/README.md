@@ -1,17 +1,29 @@
-# intro_flow_example
+# Bloom intro flow playground
 
-A new Flutter project.
+A responsive plant-store demo using the package via `path: ../`.
 
-## Getting Started
+```powershell
+flutter pub get
+flutter run -d chrome
+# flutter run -d windows
+```
 
-This project is a starting point for a Flutter application.
+The tour autoplays on first screen opening, adds a plant to the real local bag,
+follows the bag into a bottom sheet, and highlights a supplied collection widget.
+No APIs, checkout, or payments are involved. Bag contents stay after the tour.
 
-A few resources to get you started if this is your first Flutter project:
+Skip or complete the tour to access the settings panel. Try frequency policies,
+screen reopening, manual replay, history reset, custom cards, dark appearance,
+accent colors, and arrows. Pause is available in the custom card; Resume appears
+in the controller panel. Durable history uses app-owned SharedPreferences.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+`main.dart` demonstrates all three target APIs and global modal placement.
+`preferences_history_store.dart` demonstrates pluggable offline storage.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```powershell
+flutter analyze
+flutter test
+flutter build web
+```
+
+See the [package guide](../README.md) for API contracts and integration details.

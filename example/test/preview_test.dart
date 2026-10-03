@@ -48,7 +48,7 @@ void main() {
                     as RenderRepaintBoundary)
                 .toImage();
         final data = await image.toByteData(format: ui.ImageByteFormat.png);
-        final dir = Directory('../docs/images');
+        final dir = Directory('../doc/images');
         await dir.create(recursive: true);
         await File(
           '${dir.path}/$name.png',
