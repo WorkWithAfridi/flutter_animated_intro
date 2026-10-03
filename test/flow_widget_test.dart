@@ -9,6 +9,94 @@ Future<void> frames(WidgetTester tester, [int count = 15]) async {
 }
 
 void main() {
+  testWidgets('route observer pauses covered screen and resumes on return', (
+    tester,
+  ) async {
+    final observer = RouteObserver<ModalRoute<dynamic>>();
+    final navigator = GlobalKey<NavigatorState>();
+    final c = IntroController(
+      tourId: 'routes',
+      steps: [
+        const IntroStep(
+          target: IntroAnchor.id('a'),
+          title: 'A',
+          description: 'A',
+        ),
+      ],
+      historyStore: MemoryIntroHistoryStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigator,
+        navigatorObservers: [observer],
+        home: IntroFlow(
+          controller: c,
+          routeObserver: observer,
+          startDelay: Duration.zero,
+          child: const Scaffold(
+            body: IntroTarget(id: 'a', child: Text('Target')),
+          ),
+        ),
+      ),
+    );
+    await frames(tester);
+    expect(c.isActive, isTrue);
+    navigator.currentState!.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const Scaffold(body: Text('Other screen')),
+      ),
+    );
+    await frames(tester);
+    expect(c.isPaused, isTrue);
+    navigator.currentState!.pop();
+    await frames(tester);
+    expect(c.isPaused, isFalse);
+    expect(c.currentIndex, 0);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  });
+  testWidgets('scrolls an existing offscreen key into view', (tester) async {
+    final target = GlobalKey();
+    final scroll = ScrollController();
+    final c = IntroController(
+      tourId: 'scroll',
+      steps: [
+        IntroStep(
+          target: IntroAnchor.key(target),
+          title: 'Scrolled target',
+          description: 'Below the fold',
+        ),
+      ],
+      historyStore: MemoryIntroHistoryStore(),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: IntroFlow(
+          controller: c,
+          startDelay: Duration.zero,
+          child: Scaffold(
+            body: SingleChildScrollView(
+              controller: scroll,
+              child: Column(
+                children: [
+                  const SizedBox(height: 1000),
+                  Text('Offscreen', key: target),
+                  const SizedBox(height: 400),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await frames(tester, 30);
+    expect(scroll.offset, greaterThan(0));
+    expect(find.text('Scrolled target'), findsOneWidget);
+    expect(c.error, isNull);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+    scroll.dispose();
+  });
   testWidgets('remounting targets releases old IDs before disposal', (
     tester,
   ) async {
